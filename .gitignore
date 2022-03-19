@@ -6,3 +6,4 @@ azuri.env
 /src/.env
 node_modules
 src/package-lock.json
+.idea

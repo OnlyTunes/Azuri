@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import Discord from "discord.js";
+import axios from "axios";
 import fs from "fs";
 import * as Utils from "./utils/utils.mjs";
 import * as GuildUtils from "./utils/guilds.mjs";
@@ -35,10 +36,12 @@ commandFiles.forEach(async (file) => {
 client.on("ready", async () => {
   console.log(`Bot has Started`);
 
-  var prefix = process.env.DEFAULT_PREFIX;
-  var activityMessage = process.env.STATUS_MESSAGE.replace("{prefix}", prefix);
-  var activityType = process.env.ACTIVITY_TYPE;
-  var statusType = process.env.STATUS_TYPE;
+  await setInterval(updateChannel, 20000);
+
+  const prefix = process.env.DEFAULT_PREFIX;
+  let activityMessage = process.env.STATUS_MESSAGE.replace("{prefix}", prefix);
+  let activityType = process.env.ACTIVITY_TYPE;
+  let statusType = process.env.STATUS_TYPE;
   client.user.setActivity(activityMessage, { type: activityType });
   if (statusType) client.user.setStatus(statusType);
 
@@ -68,7 +71,7 @@ client.on("messageCreate", (message) => {
 
   let serverData = GuildUtils.getForGuild(message.guild);
 
-  var prefix = process.env.DEFAULT_PREFIX;
+  let prefix = process.env.DEFAULT_PREFIX;
   if (serverData.prefix) prefix = serverData.prefix;
   if (!message.content.startsWith(prefix) || message.author.bot) return;
 
@@ -85,10 +88,10 @@ client.on("messageCreate", (message) => {
       );
 
     try {
-      var serverCommands = serverData.commands;
+      let serverCommands = serverData.commands;
 
       if (serverCommands[commandName]) {
-        var command = serverCommands[commandName];
+        let command = serverCommands[commandName];
 
         if (
           !message.channel.permissionsFor(message.member).has("MANAGE_GUILD") ||
@@ -144,3 +147,32 @@ global.sleep = (ms) => {
 };
 
 client.login(process.env.BOT_TOKEN);
+
+// Channel Topic Update!
+
+async function updateChannel() {
+  let guild = await client.guilds.fetch(process.env.GUILD_ID);
+  let channel = await guild.channels.fetch(process.env.CHANNEL_ID);
+
+  await axios.get(`${process.env.API_URL}/nowplaying/${process.env.STATION_ID}`)
+    .then((response) => {
+      let status = response.status;
+      let data = response.data;
+
+      if (status !== 200) {
+        console.log(`\x1b[31m[ERROR]\x1b[0m Unable to update channel topic. ERR: ${data.message}`);
+      } else {
+        channel.setTopic(`${data.now_playing.song.artist} - ${data.now_playing.song.title}`)
+          .then(() => {
+            console.log(`\x1b[32m[INFO]\x1b[0m Updated channel topic.`);
+          })
+          .catch((error) => {
+            console.log(`\x1b[31m[ERROR]\x1b[0m Unable to update channel topic. ERR: ${error}`);
+          });
+      }
+
+    })
+    .catch((error) => {
+      Utils.logError(new Date(), error);
+    });
+}
