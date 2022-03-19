@@ -162,7 +162,7 @@ async function updateChannel() {
       if (status !== 200) {
         console.log(`\x1b[31m[ERROR]\x1b[0m Unable to update channel topic. ERR: ${data.message}`);
       } else {
-        channel.setTopic(`${data.now_playing.song.artist} - ${data.now_playing.song.title}`)
+        channel.setTopic(`Now Playing: ${data.now_playing.song.artist} - ${data.now_playing.song.title}  |  Playlist: ${data.now_playing.playlist}`)
           .then(() => {
             console.log(`\x1b[32m[INFO]\x1b[0m Updated channel topic.`);
           })
